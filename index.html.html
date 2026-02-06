@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>업무용 라이트 카메라</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes"> <meta name="mobile-web-app-capable" content="yes"> <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            /* 모바일에서 당겨서 새로고침 방지 (앱 같은 느낌) */
+            overscroll-behavior-y: none; 
+        }
+        h1 { margin-bottom: 20px; color: #333; font-size: 1.5rem; }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        #cameraInput { display: none; }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 15px 0;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-primary:active { background-color: #0056b3; }
+        .btn-download { background-color: #28a745; color: white; display: none; text-decoration: none; line-height: 1.5; }
+        
+        #preview {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            border: 2px solid #eee;
+        }
+        .info {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 10px;
+            white-space: pre-line;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 업무용 라이트 카메라</h1>
+        <p class="info">사진을 찍으면 자동으로 용량이 줄어듭니다.</p>
+
+        <button class="btn btn-primary" onclick="document.getElementById('cameraInput').click();">
+            사진 촬영 / 선택
+        </button>
+
+        <input type="file" id="cameraInput" accept="image/*" capture="environment">
+        <img id="preview" alt="미리보기">
+        <div id="status" class="info"></div>
+        <a id="downloadBtn" class="btn btn-download">압축된 사진 저장하기</a>
+    </div>
+
+    <script>
+        const cameraInput = document.getElementById('cameraInput');
+        const preview = document.getElementById('preview');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const status = document.getElementById('status');
+
+        const MAX_WIDTH = 1280; 
+        const MAX_HEIGHT = 1280;
+        const COMPRESSION_QUALITY = 0.7;
+
+        cameraInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            status.innerText = "사진 처리 중...";
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const dataUrl = canvas.toDataURL('image/jpeg', COMPRESSION_QUALITY);
+                    
+                    preview.src = dataUrl;
+                    preview.style.display = 'block';
+
+                    const originalSize = (file.size / 1024).toFixed(0);
+                    const compressedSize = (Math.round((dataUrl.length * 3 / 4) / 1024));
+                    
+                    status.innerText = `원본: ${originalSize}KB → 변환: 약 ${compressedSize}KB\n(해상도: ${width}x${height})`;
+
+                    const date = new Date();
+                    const fileName = `compressed_${date.getHours()}${date.getMinutes()}${date.getSeconds()}.jpg`;
+                    
+                    downloadBtn.href = dataUrl;
+                    downloadBtn.download = fileName;
+                    downloadBtn.style.display = 'block';
+                    downloadBtn.innerText = "갤러리에 저장 (꾸욱 누르세요)";
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    </script>
+</body>
+</html>
